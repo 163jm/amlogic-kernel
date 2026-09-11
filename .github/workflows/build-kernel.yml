@@ -190,9 +190,9 @@ jobs:
           if [ -f /boot/uInitrd-${KVER} ]; then
               cp -f /boot/uInitrd-${KVER} /boot/uInitrd
           fi
-          # 兼容部分 extlinux 变体用的 /boot/Image: 仅当是软链或不存在时更新
+          # 兼容部分 extlinux 变体用的 /boot/Image: vfat 不支持符号链接, 失败可忽略
           if [ -L /boot/Image ] || [ ! -e /boot/Image ]; then
-              ln -sf vmlinuz-${KVER} /boot/Image
+              ln -sf vmlinuz-${KVER} /boot/Image 2>/dev/null || true
           fi
           # dtb: 从 /usr/lib/linux-image (dpkg 拥有, ext4) cp 到 vfat 的 /boot/dtb/amlogic/
           # cp 无需硬链接, vfat 上安全; 覆盖 ophub 原版同名 dtb, uEnv.txt 的 FDT 路径无需改动
