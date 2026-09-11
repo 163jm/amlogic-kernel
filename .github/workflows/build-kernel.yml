@@ -144,9 +144,12 @@ jobs:
           tar -czf "${PKG}.tar.gz" "${PKG}"
 
           # --- deb 包 (linux-image 布局, dpkg -i 直接安装; 通用包带全部 dtb) ---
+          # 注意: ophub Amlogic 镜像的 /boot 是 vfat, 不支持硬链接, dtb 若作为 dpkg
+          # 拥有的文件放在 /boot 升级时会报 "unable to make backup link"。
+          # 故 dtb 装到 /usr/lib/linux-image-${KVER}/amlogic/ (ext4), 由 postinst cp 到 /boot。
           DEB="linux-image-amlogic"
           mkdir -p "${DEB}/DEBIAN" \
-                   "${DEB}/boot/dtb/amlogic" \
+                   "${DEB}/usr/lib/linux-image-${KVER}/amlogic" \
                    "${DEB}/lib/modules/${KVER}" \
                    "${DEB}/usr/share/doc/${DEB}"
           cp linux/arch/arm64/boot/Image       "${DEB}/boot/vmlinuz-${KVER}"
@@ -154,7 +157,7 @@ jobs:
           cp linux/.config                     "${DEB}/boot/config-${KVER}"
           for dtb in ${{ env.AMLOGIC_DTBS }}; do
             find linux/arch/arm64/boot/dts -name "${dtb}" \
-              -exec cp {} "${DEB}/boot/dtb/amlogic/" \;
+              -exec cp {} "${DEB}/usr/lib/linux-image-${KVER}/amlogic/" \;
           done
           cp boot-extra/initrd.img-${KVER} "${DEB}/boot/initrd.img-${KVER}" 2>/dev/null || true
           cp boot-extra/uInitrd-${KVER}    "${DEB}/boot/uInitrd-${KVER}"    2>/dev/null || true
@@ -178,16 +181,22 @@ jobs:
           #!/bin/sh
           set -e
           depmod -a ${KVER} 2>/dev/null || true
-          # 沿用 Armbian 式 /boot/Image 软链引导: 仅当 Image 是软链或不存在时更新
+          # ophub armbian 的 Amlogic 引导流: uEnv.txt 固定指向 /zImage 和 /uInitrd (无版本后缀)
+          # 旧内核文件 (vmlinuz/initrd.img/uInitrd-<旧KVER>) 全部保留, 回滚时改 uEnv.txt 指回即可
+          if [ -f /boot/vmlinuz-${KVER} ]; then
+              cp -f /boot/vmlinuz-${KVER} /boot/zImage
+          fi
+          if [ -f /boot/uInitrd-${KVER} ]; then
+              cp -f /boot/uInitrd-${KVER} /boot/uInitrd
+          fi
+          # 兼容部分 extlinux 变体用的 /boot/Image: 仅当是软链或不存在时更新
           if [ -L /boot/Image ] || [ ! -e /boot/Image ]; then
               ln -sf vmlinuz-${KVER} /boot/Image
           fi
-          # uInitrd 同理: 仅当是软链或不存在时更新, 不覆盖实体文件
-          if [ -L /boot/uInitrd ] || [ ! -e /boot/uInitrd ]; then
-              [ -f /boot/uInitrd-${KVER} ] && ln -sf uInitrd-${KVER} /boot/uInitrd
-          fi
-          # dtb 已随 deb 打包进 /boot/dtb/amlogic/, 布局对齐 ophub armbian
-          # (uEnv.txt / extlinux.conf 指定加载哪个 dtb)
+          # dtb: 从 /usr/lib/linux-image (dpkg 拥有, ext4) cp 到 vfat 的 /boot/dtb/amlogic/
+          # cp 无需硬链接, vfat 上安全; 覆盖 ophub 原版同名 dtb, uEnv.txt 的 FDT 路径无需改动
+          mkdir -p /boot/dtb/amlogic
+          cp -f /usr/lib/linux-image-${KVER}/amlogic/*.dtb /boot/dtb/amlogic/
           EOF
           chmod 755 "${DEB}/DEBIAN/postinst"
 
