@@ -149,6 +149,7 @@ jobs:
           # 故 dtb 装到 /usr/lib/linux-image-${KVER}/amlogic/ (ext4), 由 postinst cp 到 /boot。
           DEB="linux-image-amlogic"
           mkdir -p "${DEB}/DEBIAN" \
+                   "${DEB}/boot" \
                    "${DEB}/usr/lib/linux-image-${KVER}/amlogic" \
                    "${DEB}/lib/modules/${KVER}" \
                    "${DEB}/usr/share/doc/${DEB}"
