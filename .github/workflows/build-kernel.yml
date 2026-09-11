@@ -200,9 +200,9 @@ jobs:
           EOF
           chmod 755 "${DEB}/DEBIAN/postinst"
 
-          dpkg-deb --root-owner-group --build "${DEB}" "${DEB}.deb"
+          dpkg-deb --root-owner-group --build "${DEB}" "${PKG}.deb"
           echo "PKG_TAR=${PKG}.tar.gz"  >> $GITHUB_ENV
-          echo "PKG_DEB=${DEB}.deb"     >> $GITHUB_ENV
+          echo "PKG_DEB=${PKG}.deb"     >> $GITHUB_ENV
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
