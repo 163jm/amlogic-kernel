@@ -206,7 +206,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: kernel-amlogic
+          tag_name: kernel
           files: |
             ${{ env.PKG_TAR }}
             ${{ env.PKG_DEB }}
