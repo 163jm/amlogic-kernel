@@ -29,15 +29,15 @@ jobs:
 
       - name: Download stable kernel source (7.1.13, 与 panther-x2 成功构建源一致)
         run: |
-          KVER=7.2.5
+          KVER=6.18.51
           # 不用 torvalds v7.1 tag: 发布点与 stable 7.1.y 有 DMA/CPU-offline API 重构差异, v7.1 无法编译
-          wget -q "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-${KVER}.tar.xz"
+          wget -q "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${KVER}.tar.xz"
           tar -xf "linux-${KVER}.tar.xz"
           mv "linux-${KVER}" linux
 
-      - name: Overlay amlogic-kernel files into kernel tree
-        run: |
-          rsync -a arch/ linux/arch/
+     # - name: Overlay amlogic-kernel files into kernel tree
+      #  run: |
+       #   rsync -a arch/ linux/arch/
 
       - name: Install dependencies
         run: |
@@ -133,10 +133,6 @@ jobs:
           # --- tar.gz: ophub 布局, dtb/amlogic/ 与 armbian /boot/dtb 对应 ---
           mkdir -p "${PKG}/dtb/amlogic" "${PKG}/modules"
           cp linux/arch/arm64/boot/Image "${PKG}/"
-          for dtb in ${{ env.AMLOGIC_DTBS }}; do
-            find linux/arch/arm64/boot/dts -name "${dtb}" \
-              -exec cp {} "${PKG}/dtb/amlogic/" \;
-          done
           cp -r linux/modules-out/lib/modules/"${KVER}"* "${PKG}/modules/" || true
           cp boot-extra/initrd.img-${KVER} "${PKG}/" 2>/dev/null || true
           cp boot-extra/uInitrd-${KVER} "${PKG}/" 2>/dev/null || true
@@ -156,10 +152,6 @@ jobs:
           cp linux/arch/arm64/boot/Image       "${DEB}/boot/vmlinuz-${KVER}"
           cp linux/System.map                  "${DEB}/boot/System.map-${KVER}"
           cp linux/.config                     "${DEB}/boot/config-${KVER}"
-          for dtb in ${{ env.AMLOGIC_DTBS }}; do
-            find linux/arch/arm64/boot/dts -name "${dtb}" \
-              -exec cp {} "${DEB}/usr/lib/linux-image-${KVER}/amlogic/" \;
-          done
           cp boot-extra/initrd.img-${KVER} "${DEB}/boot/initrd.img-${KVER}" 2>/dev/null || true
           cp boot-extra/uInitrd-${KVER}    "${DEB}/boot/uInitrd-${KVER}"    2>/dev/null || true
           cp -r linux/modules-out/lib/modules/"${KVER}"* "${DEB}/lib/modules/${KVER}/" || true
@@ -194,10 +186,6 @@ jobs:
           if [ -L /boot/Image ] || [ ! -e /boot/Image ]; then
               ln -sf vmlinuz-${KVER} /boot/Image 2>/dev/null || true
           fi
-          # dtb: 从 /usr/lib/linux-image (dpkg 拥有, ext4) cp 到 vfat 的 /boot/dtb/amlogic/
-          # cp 无需硬链接, vfat 上安全; 覆盖 ophub 原版同名 dtb, uEnv.txt 的 FDT 路径无需改动
-          mkdir -p /boot/dtb/amlogic
-          cp -f /usr/lib/linux-image-${KVER}/amlogic/*.dtb /boot/dtb/amlogic/
           EOF
           chmod 755 "${DEB}/DEBIAN/postinst"
 
