@@ -88,7 +88,7 @@ jobs:
             echo "!! kernel-firmware/brcm 不存在或为空,跳过固件内嵌 (第一期: 有线网先行)"
           fi
 
-      - name: Build Image / dtb / modules
+      - name: Build Image
         working-directory: linux
         run: |
           make ARCH=arm64 LOCALVERSION= -j$(nproc) Image
@@ -151,11 +151,9 @@ jobs:
           DEB="linux-image-amlogic"
           mkdir -p "${DEB}/DEBIAN" \
                    "${DEB}/boot" \
-                   "${DEB}/usr/lib/linux-image-${KVER}/amlogic" \
                    "${DEB}/usr/share/doc/${DEB}"
           cp linux/arch/arm64/boot/Image       "${DEB}/boot/zImage"
           cp linux/.config                     "${DEB}/boot/kernel-config"
-          cp boot-extra/initrd.img-${KVER} "${DEB}/boot/initrd.img" 2>/dev/null || true
           cp boot-extra/uInitrd-${KVER}    "${DEB}/boot/uInitrd"    2>/dev/null || true
 
           cat > "${DEB}/DEBIAN/control" << EOF
