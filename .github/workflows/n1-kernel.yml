@@ -134,14 +134,14 @@ jobs:
       - name: Package (tar.gz + deb)
         run: |
           KVER=$(cd linux && make ARCH=arm64 kernelrelease LOCALVERSION=)
-          PKG="amlogic-kernel-${KVER}"
+          PKG="phicomm-n1-kernel-${KVER}"
 
           # --- tar.gz: ophub 布局, dtb/amlogic/ 与 armbian /boot/dtb 对应 ---
           mkdir -p "${PKG}"
           cp linux/arch/arm64/boot/Image "${PKG}/"
-          cp boot-extra/initrd.img-${KVER} "${PKG}/" 2>/dev/null || true
-          cp boot-extra/uInitrd-${KVER} "${PKG}/" 2>/dev/null || true
-          cp linux/.config "${PKG}/kernel.config"
+          cp boot-extra/initrd.img-${KVER} "${PKG}/initrd.img" 2>/dev/null || true
+          cp boot-extra/uInitrd-${KVER} "${PKG}/uInitrd" 2>/dev/null || true
+          cp linux/.config "${PKG}/kernel-config"
           tar -czf "${PKG}.tar.gz" "${PKG}"
 
           # --- deb 包 (linux-image 布局, dpkg -i 直接安装; 通用包带全部 dtb) ---
@@ -153,14 +153,13 @@ jobs:
                    "${DEB}/boot" \
                    "${DEB}/usr/lib/linux-image-${KVER}/amlogic" \
                    "${DEB}/usr/share/doc/${DEB}"
-          cp linux/arch/arm64/boot/Image       "${DEB}/boot/vmlinuz-${KVER}"
-          cp linux/System.map                  "${DEB}/boot/System.map-${KVER}"
-          cp linux/.config                     "${DEB}/boot/config-${KVER}"
-          cp boot-extra/initrd.img-${KVER} "${DEB}/boot/initrd.img-${KVER}" 2>/dev/null || true
-          cp boot-extra/uInitrd-${KVER}    "${DEB}/boot/uInitrd-${KVER}"    2>/dev/null || true
+          cp linux/arch/arm64/boot/Image       "${DEB}/boot/zImage"
+          cp linux/.config                     "${DEB}/boot/kernel-config"
+          cp boot-extra/initrd.img-${KVER} "${DEB}/boot/initrd.img" 2>/dev/null || true
+          cp boot-extra/uInitrd-${KVER}    "${DEB}/boot/uInitrd"    2>/dev/null || true
 
           cat > "${DEB}/DEBIAN/control" << EOF
-          Package: linux-image-n1
+          Package: linux-image-phicomm-n1
           Version: ${KVER}
           Architecture: arm64
           Maintainer: 163jm <163jm@users.noreply.github.com>
@@ -174,34 +173,13 @@ jobs:
 
           cat > "${DEB}/DEBIAN/postinst" << EOF
           #!/bin/sh
-          set -e
-          depmod -a ${KVER} 2>/dev/null || true
-          # ophub armbian 的 Amlogic 引导流: uEnv.txt 固定指向 /zImage 和 /uInitrd (无版本后缀)
-          # 旧内核文件 (vmlinuz/initrd.img/uInitrd-<旧KVER>) 全部保留, 回滚时改 uEnv.txt 指回即可
-          if [ -f /boot/vmlinuz-${KVER} ]; then
-              cp -f /boot/vmlinuz-${KVER} /boot/zImage
-          fi
-          if [ -f /boot/uInitrd-${KVER} ]; then
-              cp -f /boot/uInitrd-${KVER} /boot/uInitrd
-          fi
-          # 兼容部分 extlinux 变体用的 /boot/Image: vfat 不支持符号链接, 失败可忽略
-          if [ -L /boot/Image ] || [ ! -e /boot/Image ]; then
-              ln -sf vmlinuz-${KVER} /boot/Image 2>/dev/null || true
-          fi
+          exit 0
           EOF
           chmod 755 "${DEB}/DEBIAN/postinst"
 
           dpkg-deb --root-owner-group --build "${DEB}" "${PKG}.deb"
           echo "PKG_TAR=${PKG}.tar.gz"  >> $GITHUB_ENV
           echo "PKG_DEB=${PKG}.deb"     >> $GITHUB_ENV
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: kernel-package
-          path: |
-            ${{ env.PKG_TAR }}
-            ${{ env.PKG_DEB }}
 
       - name: Release
         uses: softprops/action-gh-release@v2
