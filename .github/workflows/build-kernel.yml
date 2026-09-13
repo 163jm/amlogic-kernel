@@ -93,6 +93,14 @@ jobs:
         run: |
           make ARCH=arm64 LOCALVERSION= -j$(nproc) Image
 
+      - name: Verify Image text_offset (must be 0x1080000)
+        working-directory: linux
+        run: |
+          # 最终产物强校验: text_offset 错了在 CI 就 fail, 避免刷到板子上才发现循环重启
+          TO=$(python3 -c "import struct;print(hex(struct.unpack('<Q',open('arch/arm64/boot/Image','rb').read(16)[8:16])[0]))")
+          echo "Image text_offset = $TO"
+          [ "$TO" = "0x1080000" ] || { echo "!! text_offset 不是 0x1080000, text_offset 补丁未生效"; exit 1; }
+
       - name: Generate initrd.img / uInitrd (ophub 式, 复刻 generate_uinitrd)
         run: |
           KVER=$(cd linux && make ARCH=arm64 kernelrelease LOCALVERSION=)
