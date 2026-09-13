@@ -31,16 +31,10 @@ CONFIG_MESON_CLK_MEASURE=y
 CONFIG_MESON_EE_PM_DOMAINS=y
 CONFIG_MESON_SECURE_PM_DOMAINS=y
 
-# --- ophub 私有 WiFi/BT 驱动 ---
-# 注意: 以下均为 ophub out-of-tree 符号, 主线 7.1.13 无此 Kconfig, 编译时会被静默丢弃;
-# 二期移植 WiFi 驱动时再启用
-CONFIG_SSV6051=y
-CONFIG_WLAN_VENDOR_AIC=y
-CONFIG_AIC8800_SUPPORT=y
-CONFIG_AIC8800_SDIO_WLAN=y
-CONFIG_AIC8800_USB_WLAN=y
-CONFIG_AIC8800_BTUSB_SUPPORT=y
-CONFIG_BT_HCIAIC=y
+# --- ophub 私有 WiFi/BT 驱动已拆到 ophub-private.fragment ---
+# SSV6051 / AIC8800 是 ophub out-of-tree 符号, 主线源码里没有, 只在
+# build-kernel-ophub.yml (源码 = ophub/linux-6.18.y) 中由该 fragment 启用。
+# N1 是 Broadcom BCM43455, 走主线 brcmfmac, 与这些符号无关。
 
 # --- CPU 调频 (cpufreq-dt + opp-table) ---
 CONFIG_CPUFREQ_DT=y
