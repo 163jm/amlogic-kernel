@@ -50,6 +50,12 @@ jobs:
             ../kernel-config/amlogic.fragment
           make ARCH=arm64 olddefconfig
 
+      - name: Disable AIC8800 BT driver (no BSP counterpart)
+        working-directory: linux
+        run: |
+          ./scripts/config --disable CONFIG_BT_HCIAIC8800
+          make ARCH=arm64 olddefconfig
+
       - name: Apply kernel sign (写入 CONFIG_LOCALVERSION,影响 uname -r)
         working-directory: linux
         run: |
